@@ -48,7 +48,7 @@ def find_scanners_match(ks, us, nm, sl, oo = orientation_options):
     for i, unknown_beacons in us.items():
         for ii, known_beacons in ks.items():
             if (i, ii) in nm: continue
-            if len(beacon_distances[i] & beacon_distances[ii]) < 12: continue
+            if len(beacon_distances[i] & beacon_distances[ii]) < 60: continue
             found_a_match = False
             for orientation_option in oo:
                 rotated_unknowns = dot(unknown_beacons, orientation_option)
