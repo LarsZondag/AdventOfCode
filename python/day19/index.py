@@ -1,6 +1,5 @@
 # %%
 import numpy as np
-from numpy.lib.function_base import copy
 with open('sample_input.txt') as f:
     data = f.read()
 data = data.split('\n\n')
@@ -28,37 +27,48 @@ for x in direction_options:
         orientation_options.append(np.array([x, y, z]))
 
 #%%
-unknown_scanners = scanners.copy()
-known_beacons = set([tuple(x) for x in unknown_scanners.pop()])
+unknown_scanners = {i: scanner for i, scanner in enumerate(scanners)}
+known_scanners = {0: set([tuple(x) for x in unknown_scanners.pop(0)])}
+not_matching_scanners = set()
 scanner_locations = [np.array([0,0,0])]
+
+def find_scanners_match(ks, us, nm, sl, oo = orientation_options):
+    dot = np.dot
+    number_of_comparisons = 0
+    for i, unknown_beacons in us.items():
+        for ii, known_beacons in ks.items():
+            if (i, ii) in nm: continue
+            found_a_match = False
+            for orientation_option in oo:
+                rotated_unknowns = dot(unknown_beacons, orientation_option)
+                for known_beacon in known_beacons:
+                    for unknown in rotated_unknowns:
+                        number_of_comparisons += 1
+                        diff = unknown - known_beacon
+                        translated_unknowns = rotated_unknowns - diff
+
+                        translated_unknowns = set([tuple(x) for x in translated_unknowns])
+                        if len(translated_unknowns & known_beacons) >= 12:
+                            print("number of comparisons: ", number_of_comparisons)
+                            found_a_match = True
+                            ks[i] = translated_unknowns
+                            del us[i]
+                            scanner_location = np.array(-diff)
+                            sl.append(scanner_location)
+                            return
+            if not found_a_match: nm.add((i, ii))
+    
+
+
 while len(unknown_scanners) > 0:
+    find_scanners_match(known_scanners, unknown_scanners, not_matching_scanners, scanner_locations)
     print(len(unknown_scanners))
-    unknown_matched = -1
-    for i, unknowns in enumerate(unknown_scanners):
-        has_been_matched = False
-        for orientation_option in orientation_options:
-            if has_been_matched: break
-            rotated_unknowns = np.dot(unknowns, orientation_option)
-            for known in known_beacons:
-                if has_been_matched: break
-                for unknown in rotated_unknowns:
-                    diff = unknown - known
-                    translated_unknowns = rotated_unknowns - diff
 
-                    translated_unknowns = set([tuple(x) for x in translated_unknowns])
-                    if len(translated_unknowns & known_beacons) >= 12:
-                        has_been_matched = True
-                        known_beacons = known_beacons | translated_unknowns
-                        unknown_matched = i
-                        scanner_location = np.array(-diff)
-                        scanner_locations.append(scanner_location)
-                        break
-        if has_been_matched: break
-    if unknown_matched > -1:
-        unknown_scanners.pop(unknown_matched)
-print(len(known_beacons))
+all_beacons = set()
+for beacons in known_scanners.values():
+    all_beacons = all_beacons | beacons
+print(len(all_beacons))
 
-#%%
 max_d = -np.inf
 for loc1 in scanner_locations:
     for loc2 in scanner_locations:
