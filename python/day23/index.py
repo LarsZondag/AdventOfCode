@@ -2,7 +2,8 @@
 from collections import defaultdict
 from numpy import sign, Inf
 from copy import deepcopy
-with open('sample_input.txt') as f:
+import re
+with open('input.txt') as f:
     data = [x.strip() for x in f.readlines()]
 data
 hallway = data[1]
@@ -10,15 +11,19 @@ hallway = [x == '.' for x in hallway]
 hallway = [None] * sum(hallway)
 hallway
 
-
-roomA = [data[2][3], data[3][1]]
-roomB = [data[2][5], data[3][3]]
-roomC = [data[2][7], data[3][5]]
-roomD = [data[2][9], data[3][7]]
+roomA = []
+roomB = []
+roomC = []
+roomD = []
+for line in data[2:-1]:
+    A, B, C, D = re.findall(r"([A-Z])", line)
+    roomA.append(A)
+    roomB.append(B)
+    roomC.append(C)
+    roomD.append(D)
 rooms = dict(A=roomA, B=roomB, C=roomC, D=roomD)
 room_to_hallway_index = dict(A=2, B=4, C=6, D=8)
 energy_per_type = dict(A=1, B=10, C=100, D=1000)
-
 
 def amphipods_are_sorted(rs):
     for key, values in rs.items():
@@ -55,26 +60,29 @@ def move_amphipod(h, rs, energy=0, prev_states = []):
             continue
         if rs[hh][0] is None:
             # There is space in my room, let's see if I can get there
-            second_spot_free = rs[hh][1] is None
-            if second_spot_free is not True and rs[hh][1] != hh:
-                continue
             dest_index = room_to_hallway_index[hh]
             direction = sign(dest_index - i)
 
             if any(h[i+direction:dest_index+direction:direction]): 
                 continue
+
+            # Check for traitor in my room
+            spot = None
+            traitor = False
+            for ii, pos in enumerate(rs[hh]):
+                if pos is None: 
+                    spot = ii
+                elif pos != hh: traitor = True
+            if traitor: continue
+            moves = spot + 1
+
             # I CAN MOVE!
             new_rooms = deepcopy(rs)
             new_hallway = deepcopy(h)
             new_hallway[i] = None
             energy_coef = energy_per_type[hh]
-            moves = abs(i - dest_index)
-            if second_spot_free:
-                new_rooms[hh][1] = hh
-                moves += 2
-            else:
-                new_rooms[hh][0] = hh
-                moves += 1
+            moves += abs(i - dest_index)
+            new_rooms[hh][spot] = hh
             new_energy = energy + moves * energy_coef
             state_to_add = hall_rooms_to_state(new_hallway, new_rooms)
             if new_energy >= seen_game_states[state_to_add]: continue
@@ -83,19 +91,18 @@ def move_amphipod(h, rs, energy=0, prev_states = []):
             next_game_states[state_to_add] = (new_hallway, new_rooms, new_energy, [*prev_states, state_to_add])
 
     # Now move amphipods out into the hallway!
-    for i, [spot1, spot2] in rs.items():
-        if i == spot1 == spot2:
-            continue
-        moves = 1
-        if spot1 is not None:
-            originatingFromIndex = 0
-            toMove = spot1
-        elif spot2 is not None:
-            originatingFromIndex = 1
-            toMove = spot2
-            moves += 1
-        else:
-            continue
+    for i, spots in rs.items():
+        already_sorted = True
+        for spot in spots:
+            already_sorted = already_sorted and spot == i
+        if already_sorted: continue
+        spot = None
+        for ii, spot in enumerate(spots):
+            if spot is not None:
+                moves = ii + 1
+                originatingFromIndex, toMove = ii, spot
+                break
+        if spot is None: continue
         starting_index = room_to_hallway_index[i]
         energy_coef = energy_per_type[toMove]
 
@@ -133,20 +140,21 @@ while next_game_states:
 print(lowest_energy_ever)
 
 
+#%%
 def print_state(h, rs):
     hh = [x if x is not None else ' ' for x in h]
     A = [x if x is not None else ' ' for x in rs[0]]
     B = [x if x is not None else ' ' for x in rs[1]]
     C = [x if x is not None else ' ' for x in rs[2]]
     D = [x if x is not None else ' ' for x in rs[3]]
-    print(f"""
-        #############
-        #{"".join(hh)}#
-        ###{A[0]}#{B[0]}#{C[0]}#{D[0]}###
-          #{A[1]}#{B[1]}#{C[1]}#{D[1]}#
-          #########""")
+    print("#############")
+    print(f"#{''.join(hh)}#")
+    print(f"###{A[0]}#{B[0]}#{C[0]}#{D[0]}###")
+    for i in range(1, len(A)):
+        print(f"  #{A[i]}#{B[i]}#{C[i]}#{D[i]}#")
+    print(f"  #########")
 depth = 0
-for h, rs in state_path:
+for h, rs in state_path[-5:]:
     if depth >= 4: break
     print_state(h, rs)
     print()
