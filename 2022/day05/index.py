@@ -1,6 +1,6 @@
 #%%
 
-with open("input5.txt", encoding="utf-8") as f:
+with open("input.txt", encoding="utf-8") as f:
     data = f.read()
 
 stacks, instructions = [s.splitlines() for s in data.split("\n\n")]

@@ -1,5 +1,5 @@
 #%%
-with open("input7.txt", encoding="utf-8") as f:
+with open("input.txt", encoding="utf-8") as f:
     data = f.read().splitlines()
 
 tree: dict = {"/": {}}
