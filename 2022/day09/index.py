@@ -32,10 +32,14 @@ def n_positions_of_tail(
                     # We can move!
                     knots[i, 0] += max(-1, min(1, diff_x))
                     knots[i, 1] += max(-1, min(1, diff_y))
-
+                else:
+                    # This knot does not move, so the next knots also do not move
+                    break
             visited.add(tuple(knots[-1, :]))
     return len(visited)
 
 
 print(f"Part 1: {n_positions_of_tail(data, 2)}")
 print(f"Part 2: {n_positions_of_tail(data, 10)}")
+
+# %%
